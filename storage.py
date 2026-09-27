@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import URL, Engine, make_url
 
 from content import Choice, Condition
 from db_schema import Attempt, Participant, Turn, initialize_schema
@@ -22,9 +22,16 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _engine_url(database_url: str) -> URL:
+    url = make_url(database_url)
+    if url.drivername in {"postgres", "postgresql"}:
+        return url.set(drivername="postgresql+psycopg")
+    return url
+
+
 class StudyStore:
     def __init__(self, database_url: str) -> None:
-        self.engine: Engine = create_engine(database_url, pool_pre_ping=True)
+        self.engine: Engine = create_engine(_engine_url(database_url), pool_pre_ping=True)
         initialize_schema(self.engine)
 
     def create_participant(
