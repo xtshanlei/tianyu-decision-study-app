@@ -22,7 +22,8 @@ def main() -> None:
 
     queries = {
         "participants.csv": "SELECT * FROM participants ORDER BY created_at, id",
-        "analysis.csv": """SELECT p.id AS participant_id, p.condition, p.choice,
+        "analysis.csv": """SELECT p.id AS participant_id, p.participation_id,
+            p.condition, p.choice,
             p.reason, p.prompt_sha256, p.model, p.created_at AS participant_created_at,
             p.completed_at AS participant_completed_at, t.turn_index, t.question,
             t.answer, t.word_count, t.completed_at AS turn_completed_at

@@ -31,7 +31,9 @@ def _engine_url(database_url: str) -> URL:
 
 class StudyStore:
     def __init__(self, database_url: str) -> None:
-        self.engine: Engine = create_engine(_engine_url(database_url), pool_pre_ping=True)
+        self.engine: Engine = create_engine(
+            _engine_url(database_url), pool_pre_ping=True
+        )
         initialize_schema(self.engine)
 
     def create_participant(
@@ -41,18 +43,21 @@ class StudyStore:
         reason: str,
         system_prompt: str,
         model: str,
+        *,
+        participation_id: str | None = None,
     ) -> str:
         token = secrets.token_urlsafe(32)
         with self.engine.begin() as connection:
             connection.execute(
                 text("""INSERT INTO participants
-                    (id, token_hash, condition, choice, reason, system_prompt,
+                    (id, token_hash, participation_id, condition, choice, reason, system_prompt,
                      prompt_sha256, model, created_at)
-                    VALUES (:id, :token_hash, :condition, :choice, :reason,
+                    VALUES (:id, :token_hash, :participation_id, :condition, :choice, :reason,
                             :system_prompt, :prompt_sha256, :model, :created_at)"""),
                 {
                     "id": str(uuid4()),
                     "token_hash": _token_hash(token),
+                    "participation_id": participation_id,
                     "condition": condition.value,
                     "choice": choice,
                     "reason": reason,
@@ -80,6 +85,7 @@ class StudyStore:
             return None
         return Participant(
             id=row["id"],
+            participation_id=row["participation_id"],
             condition=Condition(row["condition"]),
             choice=row["choice"],
             reason=row["reason"],

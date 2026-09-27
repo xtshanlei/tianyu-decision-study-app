@@ -20,16 +20,23 @@ class StudyService:
         self._provider = provider
 
     def start(
-        self, position: InitialPosition, condition: Condition | None = None
+        self,
+        position: InitialPosition,
+        condition: Condition | None = None,
+        *,
+        participation_id: str | None = None,
     ) -> str:
         assigned = condition or (
-            Condition.B
-            if secrets.randbelow(2) == 0
-            else Condition.A
+            Condition.B if secrets.randbelow(2) == 0 else Condition.A
         )
         prompt = make_system_prompt(assigned, position)
         return self._store.create_participant(
-            assigned, position.choice, position.reason, prompt, MODEL
+            assigned,
+            position.choice,
+            position.reason,
+            prompt,
+            MODEL,
+            participation_id=participation_id,
         )
 
     def answer_next(self, token: str) -> Turn:

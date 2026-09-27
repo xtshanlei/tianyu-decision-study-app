@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
 from content import Choice, Condition
@@ -13,6 +13,7 @@ from content import Choice, Condition
 @dataclass(frozen=True, slots=True)
 class Participant:
     id: str
+    participation_id: str | None
     condition: Condition
     choice: Choice
     reason: str
@@ -43,6 +44,7 @@ def initialize_schema(engine: Engine) -> None:
     statements = (
         """CREATE TABLE IF NOT EXISTS participants (
             id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE,
+            participation_id TEXT,
             condition TEXT NOT NULL, choice TEXT NOT NULL, reason TEXT NOT NULL,
             system_prompt TEXT NOT NULL, prompt_sha256 TEXT NOT NULL,
             model TEXT NOT NULL, created_at TEXT NOT NULL,
@@ -72,3 +74,10 @@ def initialize_schema(engine: Engine) -> None:
     with engine.begin() as connection:
         for statement in statements:
             connection.execute(text(statement))
+        columns = {
+            column["name"] for column in inspect(connection).get_columns("participants")
+        }
+        if "participation_id" not in columns:
+            connection.execute(
+                text("ALTER TABLE participants ADD COLUMN participation_id TEXT")
+            )
