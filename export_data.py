@@ -9,6 +9,8 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, text
 
+from storage import _engine_url
+
 
 def main() -> None:
     database_url = os.environ.get("DATABASE_URL")
@@ -16,7 +18,7 @@ def main() -> None:
         raise RuntimeError("Set DATABASE_URL before exporting study data.")
     output_dir = Path(os.environ.get("EXPORT_DIR", "exports"))
     output_dir.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(database_url, pool_pre_ping=True)
+    engine = create_engine(_engine_url(database_url), pool_pre_ping=True)
 
     queries = {
         "participants.csv": "SELECT * FROM participants ORDER BY created_at, id",
