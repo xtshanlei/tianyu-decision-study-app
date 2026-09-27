@@ -2,6 +2,8 @@
 
 This is the participant-facing Streamlit app for a three-question research study. The experimental instructions and credentials are supplied through Streamlit Cloud Secrets and are not stored in this repository.
 
+Participants choose Option A or B and enter one sentence before the chat begins. Their initial view, each fixed question, and each assistant reply appear in one chronological chat transcript. The interface does not accept additional free-form questions.
+
 ## Deployment
 
 Use `app.py` on Python 3.12. Configure these root-level Streamlit Secrets before collecting responses:

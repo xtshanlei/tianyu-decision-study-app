@@ -32,18 +32,27 @@ st.markdown(
 :root {
   --canvas: #FAF9F7; --surface: #FFFFFF; --text: #242320;
   --muted: #62605C; --border: #E7E4DF; --action: #2E4A46;
-  --action-hover: #233B37; --radius: 8px;
+  --action-hover: #233B37; --participant: #EAF0ED; --radius: 8px;
+  --title-font: Georgia, serif; --title-size: 32px; --title-leading: 1.15;
+  --title-tracking: -0.02em; --body-leading: 1.55; --metadata-size: 13px;
+  --content-width: 760px; --page-top: 52px; --page-bottom: 64px;
+  --mobile-page-top: 28px; --mobile-page-side: 16px; --mobile-page-bottom: 48px;
+  --chat-indent: 48px; --mobile-chat-indent: 18px; --chat-gap: 12px;
 }
 [data-testid="stAppViewContainer"] { background: var(--canvas); color: var(--text); }
 [data-testid="stToolbar"], [data-testid="stMainMenu"] { display: none; }
-.block-container { max-width: 760px; padding-top: 52px; padding-bottom: 64px; }
-h1 { font-family: Georgia, serif !important; font-size: 32px !important; letter-spacing: -0.02em; line-height: 1.15; }
-p, label { line-height: 1.55; }
+.block-container { max-width: var(--content-width); padding-top: var(--page-top); padding-bottom: var(--page-bottom); }
+h1 { font-family: var(--title-font) !important; font-size: var(--title-size) !important; letter-spacing: var(--title-tracking); line-height: var(--title-leading); }
+p, label { line-height: var(--body-leading); }
 [data-testid="stVerticalBlockBorderWrapper"] { background: var(--surface); border-color: var(--border) !important; border-radius: var(--radius) !important; }
+[data-testid="stChatMessage"] { width: calc(100% - var(--chat-indent)) !important; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 var(--chat-indent) var(--chat-gap) 0; }
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) { background: var(--participant); margin: 0 0 var(--chat-gap) var(--chat-indent); }
+[data-testid="stChatMessageAvatarAssistant"] { background: var(--participant) !important; color: var(--action) !important; }
+[data-testid="stChatMessageAvatarUser"] { background: var(--action) !important; color: var(--surface) !important; }
 .stButton button[kind="primary"], .stFormSubmitButton button[kind="primary"] { background: var(--action); border-color: var(--action); border-radius: var(--radius); }
 .stButton button[kind="primary"]:hover, .stFormSubmitButton button[kind="primary"]:hover { background: var(--action-hover); border-color: var(--action-hover); }
-[data-testid="stCaptionContainer"] { color: var(--muted); font-size: 13px; }
-@media (max-width: 600px) { .block-container { padding: 28px 16px 48px; } }
+[data-testid="stCaptionContainer"] { color: var(--muted); font-size: var(--metadata-size); }
+@media (max-width: 600px) { .block-container { padding: var(--mobile-page-top) var(--mobile-page-side) var(--mobile-page-bottom); } [data-testid="stChatMessage"] { width: calc(100% - var(--mobile-chat-indent)) !important; margin-right: var(--mobile-chat-indent); } [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) { margin-left: var(--mobile-chat-indent); } }
 </style>
 """,
     unsafe_allow_html=True,
@@ -72,7 +81,7 @@ st.write(
     "Please read the situation below, then share your initial view before speaking with the assistant."
 )
 
-with st.container(border=True):
+with st.chat_message("assistant"):
     st.markdown("**The situation**")
     st.write(CASE_TEXT)
     st.markdown(f"**Option A:** {OPTION_A}")
@@ -134,26 +143,31 @@ if participant is None:
                 try:
                     st.query_params["session"] = service.start(position)
                 except PromptConfigurationError:
-                    st.error("The study is temporarily unavailable. Please contact the researcher.")
+                    st.error(
+                        "The study is temporarily unavailable. Please contact the researcher."
+                    )
                 else:
                     st.rerun()
     st.stop()
 
-st.divider()
+assert token is not None
 st.caption(f"ROUND {min(participant.next_turn + 1, 3)} OF 3")
 st.progress(participant.next_turn / 3)
+with st.chat_message("user"):
+    st.markdown(f"**My initial view: Option {participant.choice}**")
+    st.write(participant.reason)
+
 for turn in store.get_turns(participant.id):
-    with st.container(border=True):
-        st.caption(f"QUESTION {turn.turn_index + 1}")
+    with st.chat_message("user"):
         st.write(turn.question)
-        st.caption("ASSISTANT")
+    with st.chat_message("assistant"):
         st.write(turn.answer)
 
 if participant.next_turn == len(QUESTIONS):
     st.success("Thank you. You have completed all three questions.")
     st.stop()
 
-st.write("Select the next question to hear the assistant's response.")
+st.caption("SELECT THE NEXT MESSAGE")
 next_question = QUESTIONS[participant.next_turn]
 if st.button(next_question, type="primary", use_container_width=True):
     service = StudyService(
@@ -162,10 +176,10 @@ if st.button(next_question, type="primary", use_container_width=True):
             api_key, setting("DEEPSEEK_BASE_URL") or "https://api.deepseek.com"
         ),
     )
-    with st.spinner("Preparing the assistant's response..."):
+    with st.chat_message("user"):
+        st.write(next_question)
+    with st.chat_message("assistant"), st.spinner("Preparing a response..."):
         try:
-            if token is None:
-                raise ValueError("This study session was not found.")
             service.answer_next(token)
         except ProviderError:
             st.error("The assistant could not respond. Please try this question again.")
